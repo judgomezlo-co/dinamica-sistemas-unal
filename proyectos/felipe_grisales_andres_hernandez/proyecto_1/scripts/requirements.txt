@@ -1,0 +1,8 @@
+et_xmlfile==2.0.0
+openpyxl==3.1.5
+# Informe final en Word (src/generar_informe_word.py)
+python-docx==1.2.0
+lxml
+latex2mathml==3.77.0
+matplotlib
+pywin32; sys_platform == "win32"

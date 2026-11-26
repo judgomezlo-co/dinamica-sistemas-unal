@@ -1,0 +1,670 @@
+\documentclass[11pt,a4paper]{article}
+
+% ============================================================================
+% PAQUETES ESTANDAR (100% COMPATIBLE CON OVERLEAF / PDFLATEX)
+% ============================================================================
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish,es-tabla]{babel}
+\usepackage{mathptmx} % Tipografia Times New Roman para texto y matematicas
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{geometry}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{hyperref}
+
+\geometry{margin=2.4cm}
+
+\definecolor{Navy}{HTML}{1B365D}
+\definecolor{Slate}{HTML}{2C5282}
+\definecolor{LightBg}{HTML}{F7FAFC}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=Navy,
+    urlcolor=Slate,
+    citecolor=Navy,
+    pdftitle={Formulas y Desarrollo Matematico Paso a Paso: Modelado de un Algoritmo Genetico mediante Dinamica de Sistemas},
+    pdfauthor={Andres Hernandez, Felipe Grisales Lopez}
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\color{Slate}Din\'amica de Sistemas -- Desarrollo Matem\'atico Completo}
+\fancyhead[R]{\small\color{Slate}Modelado de un Algoritmo Gen\'etico}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+\setlength{\parskip}{5pt}
+\setlength{\parindent}{0pt}
+
+% Entorno limpio para cuadros de formula / nota clave
+\newenvironment{cajaclave}[1]{%
+    \par\vspace{6pt}\noindent\fcolorbox{Slate}{LightBg}{%
+    \begin{minipage}{\dimexpr\linewidth-2\fboxsep-2\fboxrule\relax}%
+    \textbf{\color{Navy}#1}\par\vspace{3pt}%
+}{%
+    \end{minipage}}\par\vspace{6pt}%
+}
+
+% ============================================================================
+% TITULO
+% ============================================================================
+\title{\textbf{\color{Navy}Modelado de un Algoritmo Gen\'etico mediante Din\'amica de Sistemas}\\[6pt]
+\large Compendio Completo de F\'ormulas, Deducciones y Desarrollo Matem\'atico Paso a Paso}
+\author{Andr\'es Hern\'andez \and Felipe Grisales L\'opez\\[4pt]
+\small Din\'amica de Sistemas $\cdot$ Integraci\'on con Sistemas Inteligentes Computacionales}
+\date{19 de noviembre de 2026}
+
+\begin{document}
+\maketitle
+\tableofcontents
+\newpage
+
+% ============================================================================
+% SECCION 1
+% ============================================================================
+\section{Delimitaci\'on del sistema, frontera y diccionario de variables}
+
+Siguiendo el \textbf{M\'odulo 1} del curso de Din\'amica de Sistemas, toda formulaci\'on cuantitativa comienza declarando la pregunta de decisi\'on y delimitando la frontera del sistema:
+\begin{equation}
+Q_{\text{dec}} = (D_{\text{pol}},\; O,\; H,\; C_{\text{rest}}), \qquad
+\mathcal{S} = \{P,\; E,\; R,\; F,\; A,\; H\}
+\end{equation}
+donde:
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{Prop\'osito ($P$) y decisi\'on ($D_{\text{pol}}$):} determinar qu\'e combinaci\'on de tasa de mutaci\'on ($P_{\text{mut}}$), probabilidad de cruce ($P_{\text{cr}}$), elitismo ($E$) y capacidad de mochila ($C$) maximiza la calidad media normalizada $Q(t)$ sin agotar prematuramente la diversidad gen\'etica $D(t)$.
+    \item \textbf{Resultado observable ($O$):} trayectorias de calidad media $Q(t)$, utilidad media $\bar{Z}(t)$, diversidad gen\'etica $D(t)$ y brecha al \'optimo $B(t)$.
+    \item \textbf{Horizonte ($H$) y resoluci\'on ($\Delta t$):} $H = 30$ generaciones con paso base $\Delta t = 1\;\text{generaci\'on}$ (y prueba de sensibilidad con $\Delta t = 0.5\;\text{gen}$).
+    \item \textbf{Frontera ($F \subset U$):} dentro de la frontera quedan las variables end\'ogenas ($D, Q, B, I_D, O_D, I_Q, O_Q, \bar{Z}, B_Z$); fuera quedan las condiciones de escenario y par\'ametros ex\'ogenos ($N, L, P_{\text{cr}}, P_{\text{mut}}, E, C, u, w$).
+\end{itemize}
+
+\subsection{Diccionario formal de variables y an\'alisis dimensional (M\'odulo 3 y Problema 7)}
+
+En Din\'amica de Sistemas las unidades operan como una \emph{prueba l\'ogica obligatoria}: nunca pueden sumarse cantidades almacenadas (niveles) con tasas (flujos) sin multiplicar estas \'ultimas por un intervalo temporal $\Delta t$. La unidad de tiempo del sistema es la \textbf{generaci\'on} ($\text{gen}$).
+
+\begin{longtable}{@{}p{2.3cm}p{3.0cm}p{1.6cm}p{2.1cm}p{5.5cm}@{}}
+\toprule
+\textbf{Categor\'ia DS} & \textbf{Variable} & \textbf{S\'imbolo} & \textbf{Unidades} & \textbf{Significado / Origen} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Categor\'ia DS} & \textbf{Variable} & \textbf{S\'imbolo} & \textbf{Unidades} & \textbf{Significado / Origen} \\
+\midrule
+\endhead
+Nivel 1 (Stock) & Diversidad gen\'etica & $D(t)$ & Adim. $[0,1]$ & Varianza al\'elica promedio de la poblaci\'on. \\
+Nivel 2 (Stock) & Calidad media norm. & $Q(t)$ & Adim. $[0,1]$ & Aptitud media efectiva dividida entre $Z^*_{\text{fact}}$. \\
+Flujo entrada $D$ & Inyecci\'on por mutaci\'on & $I_D(t)$ & $\text{gen}^{-1}$ & Creaci\'on de variedad por inversi\'on de bits. \\
+Flujo salida $D$ & Consumo selecci\'on/deriva & $O_D(t)$ & $\text{gen}^{-1}$ & P\'erdida de variedad por deriva ($1/N$), ruleta y elitismo. \\
+Flujo entrada $Q$ & Ganancia de aptitud & $I_Q(t)$ & $\text{gen}^{-1}$ & Explotaci\'on habilitada por $D(t)$ sobre la brecha $B(t)$. \\
+Flujo salida $Q$ & Carga mutacional & $O_Q(t)$ & $\text{gen}^{-1}$ & Deterioro de calidad hacia el nivel aleatorio $Q_{\text{azar}}$. \\
+Auxiliar & Brecha / Backlog & $B(t)$ & Adim. $[0,1]$ & Distancia relativa al \'optimo: $B(t) = 1 - Q(t)$. \\
+Auxiliar & Utilidad media & $\bar{Z}(t)$ & utilidad & Escala de la mochila: $\bar{Z}(t) = Z^*_{\text{fact}}\,Q(t)$. \\
+Auxiliar & Brecha en utilidad & $B_Z(t)$ & utilidad & $B_Z(t) = Z^*_{\text{fact}} - \bar{Z}(t) = Z^*_{\text{fact}}\,B(t)$. \\
+Par\'ametro AG & Tama\~no poblaci\'on & $N$ & individuos & $N = 8$ individuos por generaci\'on. \\
+Par\'ametro AG & Longitud cromosoma & $L$ & bits & $L = 8$ bits ($1+2+3+2$). \\
+Par\'ametro AG & Operadores y capacidad & $P_{\text{cr}}, P_{\text{mut}}, E, C$ & adim., ind., peso & Base clase: $0.89$, $0.15$, $1$, $140$ (vinculante: $C=55$). \\
+Par\'am. estruct. & Tasa de factibilidad & $\Phi_{\text{fact}}$ & Adim. $(0,1]$ & Fracci\'on de los $2^8=256$ estados con $W(x)\le C$. \\
+Par\'am. estruct. & \'Optimo factible & $Z^*_{\text{fact}}$ & utilidad & M\'axima utilidad factible bajo capacidad $C$. \\
+Par\'am. estruct. & Calidad al azar & $Q_{\text{azar}}$ & Adim. $[0,1]$ & Valor esperado de $F(b)/Z^*_{\text{fact}}$ en espacio uniforme. \\
+Par\'am. calibr. & Tasas estructurales & $c_m, k_{\text{sel}}, k_e, k_{\text{base}}, k_{\text{cr}}, k_{\text{el}}, k_{\text{carga}}$ & $\text{gen}^{-1}$ & Calibradas sobre 5 escenarios de entrenamiento. \\
+\bottomrule
+\end{longtable}
+
+\textbf{Verificaci\'on dimensional expl\'icita:}
+\begin{align}
+\left[\frac{dD}{dt}\right] &= \frac{[D]}{[t]} = \frac{1}{\text{gen}} = [I_D] - [O_D] = \left(\text{gen}^{-1}\cdot 1\right) - \left(\text{gen}^{-1}\cdot 1\right) = \text{gen}^{-1}, \\
+\left[\frac{dQ}{dt}\right] &= \frac{[Q]}{[t]} = \frac{1}{\text{gen}} = [I_Q] - [O_Q] = \left(\text{gen}^{-1}\cdot 1\cdot 1\right) - \left(\text{gen}^{-1}\cdot 1\right) = \text{gen}^{-1}, \\
+[D_{n+1}] &= [D_n] + [\Delta t]\,[I_{D,n} - O_{D,n}] = 1 + \text{gen}\cdot\text{gen}^{-1} = 1, \\
+[\bar{Z}] &= [Z^*_{\text{fact}}]\,[Q] = \text{utilidad}\cdot 1 = \text{utilidad}, \qquad
+[\tau_D] = \frac{1}{[r_{\text{mut}} + k_D]} = \frac{1}{\text{gen}^{-1}} = \text{gen}.
+\end{align}
+
+% ============================================================================
+% SECCION 2
+% ============================================================================
+\section{Modelo microsc\'opico: Algoritmo Gen\'etico de la mochila (8 bits)}
+
+Esta secci\'on formaliza todas las ecuaciones implementadas en la hoja \texttt{03\_AG\_Paso\_a\_Paso} y en la enumeraci\'on exacta de 256 cromosomas de \texttt{02\_Parametros\_y\_Espacio}.
+
+\subsection{Codificaci\'on genotipo--fenotipo}
+
+Cada individuo $i \in \{1,\dots,N\}$ es un vector binario de $L = 8$ bits:
+\begin{equation}
+\mathbf{b}_i = (b_{i,1}, b_{i,2}, b_{i,3}, b_{i,4}, b_{i,5}, b_{i,6}, b_{i,7}, b_{i,8}) \in \{0,1\}^8.
+\end{equation}
+El cromosoma se particiona en cuatro segmentos de longitud $(1, 2, 3, 2)$ bits que codifican cantidades enteras no negativas de los cuatro tipos de objetos mediante conversi\'on binaria posicional pura:
+\begin{align}
+x_{i,1} &= b_{i,1} \in \{0, 1\}, \\
+x_{i,2} &= 2\,b_{i,2} + b_{i,3} \in \{0, 1, 2, 3\}, \\
+x_{i,3} &= 4\,b_{i,4} + 2\,b_{i,5} + b_{i,6} \in \{0, 1, \dots, 7\}, \\
+x_{i,4} &= 2\,b_{i,7} + b_{i,8} \in \{0, 1, 2, 3\}.
+\end{align}
+Esta formulaci\'on aritm\'etica reemplaza a \texttt{BIN2DEC(CONCAT(...))} para garantizar compatibilidad total en cualquier versi\'on de Excel.
+
+\textbf{Ejemplo desarrollado (Individuo 1 de Gen 0):} para $\mathbf{b}_1 = (0, 1, 0, 0, 1, 0, 1, 1)$:
+\[
+x_{1,1} = 0,\quad x_{1,2} = 2(1)+0 = 2,\quad x_{1,3} = 4(0)+2(1)+0 = 2,\quad x_{1,4} = 2(1)+1 = 3.
+\]
+
+\subsection{Funci\'on objetivo, peso y pena de muerte}
+
+Con vector de utilidades $\mathbf{u} = (4, 5, 6, 3)$ y vector de pesos $\mathbf{w} = (7, 6, 8, 2)$, para cada individuo $i$ se calculan:
+\begin{align}
+Z_i &= \sum_{m=1}^{4} u_m\,x_{i,m} = 4x_{i,1} + 5x_{i,2} + 6x_{i,3} + 3x_{i,4}, \\
+W_i &= \sum_{m=1}^{4} w_m\,x_{i,m} = 7x_{i,1} + 6x_{i,2} + 8x_{i,3} + 2x_{i,4}.
+\end{align}
+Para corregir la falla de los libros de clase (donde individuos infactibles segu\'ian recibiendo probabilidad en la ruleta), se aplica la \textbf{funci\'on de aptitud efectiva con pena de muerte}:
+\begin{equation}
+F_i = \begin{cases}
+Z_i, & \text{si } W_i \le C \quad (\text{Factible: \texttt{"SI"}}), \\
+0, & \text{si } W_i > C \quad (\text{Infactible: \texttt{"NO"}}).
+\end{cases}
+\end{equation}
+
+\textbf{Ejemplo desarrollado:} para el Individuo 1, $\mathbf{x}_1 = (0,2,2,3)$ produce:
+\[
+Z_1 = 4(0) + 5(2) + 6(2) + 3(3) = 31, \qquad W_1 = 7(0) + 6(2) + 8(2) + 2(3) = 34.
+\]
+Si $C = 140$ o $C = 55$, entonces $34 \le C \implies F_1 = 31$; pero si $C = 14$, entonces $34 > 14 \implies F_1 = 0$.
+
+\textbf{Cotas del espacio completo ($2^8 = 256$ estados):} el cromosoma m\'aximo $\mathbf{b}_{\max} = (1,1,1,1,1,1,1,1)$ decodifica en $(1, 3, 7, 3)$ con peso y utilidad:
+\[
+W_{\max} = 7(1)+6(3)+8(7)+2(3) = 87, \qquad Z_{\max} = 4(1)+5(3)+6(7)+3(3) = 70.
+\]
+Por esta raz\'on, con $C = 140$ el $100\%$ de los cromosomas es factible ($\Phi_{\text{fact}} = 1$). Al definir la tasa de factibilidad, el \'optimo factible y la calidad esperada al azar sobre los 256 cromosomas $\Omega = \{0,1\}^8$:
+\begin{equation}
+\Phi_{\text{fact}}(C) = \frac{1}{256}\sum_{\mathbf{b}\in\Omega}\mathbf{1}_{W(\mathbf{b})\le C}, \qquad
+Z^*_{\text{fact}}(C) = \max_{\mathbf{b}\in\Omega} F(\mathbf{b}), \qquad
+Q_{\text{azar}}(C) = \frac{\frac{1}{256}\sum_{\mathbf{b}\in\Omega} F(\mathbf{b})}{Z^*_{\text{fact}}(C)},
+\end{equation}
+se obtienen los valores exactos de la Tabla~\ref{tab:espacio}.
+
+\begin{table}[h]
+\centering
+\caption{Propiedades exactas del espacio de b\'usqueda de 256 estados seg\'un la capacidad $C$.}
+\label{tab:espacio}
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+\textbf{Escenario de capacidad} & \textbf{Estados factibles} & $\Phi_{\text{fact}}$ & $Z^*_{\text{fact}}$ & $Q_{\text{azar}}$ \\
+\midrule
+Clase sin restricci\'on activa ($C = 140$) & 256 / 256 & $1.0000$ & $70$ & $0.5000$ \\
+Capacidad vinculante recomendada ($C = 55$) & 176 / 256 & $0.6875$ & $46$ & $0.4022$ \\
+Caso extremo manuscrito ($C = 14$) & 11 / 256 & $0.0430$ & $12$ & $0.0254$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Operadores gen\'eticos por iteraci\'on}
+
+\subsubsection{Selecci\'on por ruleta proporcional}
+Sea $S_F = \sum_{k=1}^{N} F_k$. La probabilidad individual de selecci\'on con respaldo uniforme en caso de poblaci\'on totalmente infactible ($S_F = 0$) es:
+\begin{equation}
+p^{\text{sel}}_i = \begin{cases}
+\dfrac{F_i}{S_F}, & \text{si } S_F > 0, \\[8pt]
+\dfrac{1}{N}, & \text{si } S_F = 0,
+\end{cases}
+\qquad\text{y la probabilidad acumulada}\qquad
+A_i = \sum_{k=1}^{i} p^{\text{sel}}_k, \quad A_N = 1.
+\end{equation}
+Dado un n\'umero aleatorio $r \sim U(0,1)$, el \'indice del padre seleccionado es el primer individuo cuya acumulada cubre a $r$:
+\begin{equation}
+i^*(r) = \min\{i \in \{1,\dots,N\} : A_i \ge r\} = 1 + \sum_{k=1}^{N} \mathbf{1}_{A_k < r}.
+\end{equation}
+En Excel esto corresponde exactamente a \texttt{=MIN(8, COUNTIF(\$S\$ini:\$S\$fin, "<"\&r) + 1)}.
+
+\subsubsection{Cruce de un punto}
+Para cada una de las $N/2 = 4$ parejas $(P^{(1)}, P^{(2)})$, se generan $u_{\text{cr}}, u_{\text{corte}} \sim U(0,1)$. El punto de corte discreto entre los 8 bits se obtiene como:
+\begin{equation}
+c = \min\!\big(7,\; \lfloor 7\,u_{\text{corte}} \rfloor + 1\big) \in \{1, 2, 3, 4, 5, 6, 7\}.
+\end{equation}
+Cada gen $j \in \{1,\dots,8\}$ de los hijos $(H^{(1)}, H^{(2)})$ se construye bit a bit:
+\begin{equation}
+H^{(1)}_j = \begin{cases}
+P^{(1)}_j, & \text{si } u_{\text{cr}} \ge P_{\text{cr}} \text{ o } j \le c, \\
+P^{(2)}_j, & \text{si } u_{\text{cr}} < P_{\text{cr}} \text{ y } j > c,
+\end{cases}
+\qquad
+H^{(2)}_j = \begin{cases}
+P^{(2)}_j, & \text{si } u_{\text{cr}} \ge P_{\text{cr}} \text{ o } j \le c, \\
+P^{(1)}_j, & \text{si } u_{\text{cr}} < P_{\text{cr}} \text{ y } j > c.
+\end{cases}
+\end{equation}
+
+\subsubsection{Mutaci\'on gen a gen}
+Para cada bit $j \in \{1,\dots,8\}$ de cada hijo $H$, se genera $u_j \sim U(0,1)$ y se invierte el bit si $u_j < P_{\text{mut}}$:
+\begin{equation}
+M_j = \begin{cases}
+1 - H_j, & \text{si } u_j < P_{\text{mut}}, \\
+H_j, & \text{si } u_j \ge P_{\text{mut}}.
+\end{cases}
+\end{equation}
+
+\begin{cajaclave}{Evidencia emp\'irica de la Hip\'otesis 2 (Gen 0 $\to$ Gen 1, Pareja 4)}
+En la transici\'on Gen 0 $\to$ Gen 1 de \texttt{Mochila.xlsx}, la Pareja 4 selecciona a $P^{(1)} = (1,1,1,1,1,1,0,0)$ ($Z=61$) con $u_{\text{cr}} = 0.991 \ge 0.89 = P_{\text{cr}}$, por lo que \textbf{no ocurre cruce} ($H^{(1)} = P^{(1)}$). Luego, en la mutaci\'on de $H^{(1)}$, el bit $7$ obtiene $u_7 = 0.019 < 0.15 = P_{\text{mut}}$, invirti\'endose $0 \to 1$ y generando $M^{(1)} = (1,1,1,1,1,1,1,0)$ con fenotipo $(1,3,7,2)$, peso $W = 85 \le 140$ y utilidad $Z = 67$. Esto confirma que un nuevo mejor individuo puede surgir por mutaci\'on intra-generacional directa sin recombinaci\'on.
+\end{cajaclave}
+
+\subsubsection{Reemplazo y elitismo}
+Denotando por $M^{(1)}, \dots, M^{(8)}$ los 8 hijos mutados producidos por las 4 parejas y por $i_{\text{\'elite}} = \arg\max_{i \in \{1,\dots,8\}} F_i(t)$ al mejor individuo de la generaci\'on $t$:
+\begin{equation}
+\mathbf{b}_1(t+1) = \begin{cases}
+\mathbf{b}_{i_{\text{\'elite}}}(t), & \text{si } E = 1, \\
+M^{(8)}, & \text{si } E = 0,
+\end{cases}
+\qquad
+\mathbf{b}_k(t+1) = M^{(k-1)}, \quad k = 2, \dots, 8.
+\end{equation}
+
+\subsection{M\'etricas puente del AG hacia Din\'amica de Sistemas}
+
+Al cierre de cada generaci\'on $t$, el estado microsc\'opico de los $N=8$ cromosomas se agrega en las variables macrosc\'opicas que alimentan y validan el modelo de Din\'amica de Sistemas:
+\begin{align}
+\bar{Z}(t) &= \frac{1}{N}\sum_{i=1}^{N} F_i(t), \qquad
+Q_{\text{AG}}(t) = \frac{\bar{Z}(t)}{Z^*_{\text{fact}}}, \qquad
+B_{\text{AG}}(t) = 1 - Q_{\text{AG}}(t), \\[4pt]
+p_j(t) &= \frac{1}{N}\sum_{i=1}^{N} b_{i,j}(t), \qquad
+v_j(t) = 4\,p_j(t)\big(1 - p_j(t)\big), \qquad
+D_{\text{AG}}(t) = \frac{1}{L}\sum_{j=1}^{L} 4\,p_j(t)\big(1 - p_j(t)\big).
+\end{align}
+
+\textbf{Por qu\'e el factor $4$ en $v_j = 4p_j(1-p_j)$:} la funci\'on $f(p) = p(1-p)$ en $p \in [0,1]$ alcanza su m\'inimo $0$ cuando todos los individuos tienen el mismo bit ($p=0$ o $p=1$, cero diversidad) y su m\'aximo en $f'(p) = 1 - 2p = 0 \implies p = 0.5$, donde $f(0.5) = 0.25$. Multiplicar por $4$ normaliza exactamente la varianza al\'elica al intervalo $[0,1]$.
+
+\textbf{C\'alculo paso a paso en Gen 0 de \texttt{Mochila.xlsx}:} la suma de aptitudes es $\sum F_i = 284 \implies \bar{Z}(0) = 284/8 = 35.50$, $Q_{\text{AG}}(0) = 35.50/70 = 0.5071$ y $B_{\text{AG}}(0) = 0.4929$. Las frecuencias al\'elicas por columna son $p = (0.50, 0.50, 0.375, 0.375, 0.75, 0.625, 0.50, 0.50)$, cuyas varianzas $4p_j(1-p_j)$ son $(1, 1, 0.9375, 0.9375, 0.75, 0.9375, 1, 1)$, dando promedio exacto:
+\[
+D_{\text{AG}}(0) = \frac{1 + 1 + 0.9375 + 0.9375 + 0.75 + 0.9375 + 1 + 1}{8} = \frac{7.5}{8} = 0.9375.
+\]
+Para una poblaci\'on inicial uniforme aleatoria de tama\~no finito $N$, el valor esperado te\'orico de $D_{\text{AG}}(0)$ es $\mathbb{E}[4\hat{p}(1-\hat{p})] = 1 - \frac{1}{N} = 1 - \frac{1}{8} = 0.8750$, que se usa como condici\'on inicial $D_0$ de las simulaciones Monte Carlo.
+
+% ============================================================================
+% SECCION 3
+% ============================================================================
+\section{Estructura causal, Forrester e isomorfismo (M\'odulos 4, 5, 6 y 9)}
+
+\subsection{Polaridad de los bucles de realimentaci\'on (M\'odulo 4)}
+
+La polaridad de cualquier ciclo cerrado es el producto de los signos de sus enlaces individuales, $\Pi = \prod_{k=1}^{m} s_k \in \{+1, -1\}$:
+\begin{enumerate}[leftmargin=1.5em]
+    \item \textbf{Bucle B1 (B\'usqueda hacia el \'optimo):}
+    $Q \xrightarrow{(-)} B \xrightarrow{(+)} I_Q \xrightarrow{(+)} Q \implies \Pi = (-1)(+1)(+1) = -1$ (\textbf{Compensador}). Conforme $Q$ sube, la brecha $B = 1 - Q$ disminuye y frena la velocidad de mejora.
+    \item \textbf{Bucle B2 (Agotamiento de diversidad):}
+    $D \xrightarrow{(+)} O_D \xrightarrow{(-)} D \implies \Pi = (+1)(-1) = -1$ (\textbf{Compensador}). La selecci\'on y la deriva consumen diversidad proporcionalmente a $D$; sin mutaci\'on, $D \to 0$ y el AG se estanca.
+    \item \textbf{Bucle B3 (Equilibrio mutaci\'on--selecci\'on):}
+    $D \xrightarrow{(-)} I_D \xrightarrow{(+)} D \implies \Pi = (-1)(+1) = -1$ (\textbf{Compensador}). Cuando $D$ cae, aumenta el margen $(1-D)$ disponible para inyectar variedad, estabilizando $D$ en $D^* > 0$.
+    \item \textbf{Bucle B4 (Carga mutacional):}
+    $Q \xrightarrow{(+)} O_Q \xrightarrow{(-)} Q \implies \Pi = (+1)(-1) = -1$ (\textbf{Compensador}). Cuando $Q$ es alta, las mutaciones aleatorias degradan con mayor probabilidad la aptitud hacia $Q_{\text{azar}}$.
+    \item \textbf{Enlace habilitador acoplado (abierto):}
+    $D \xrightarrow{(+)} I_Q \xrightarrow{(+)} Q$. Conecta el Nivel 1 con el Nivel 2: si $D = 0$, la v\'alvula $I_Q$ se cierra completamente aunque persista brecha $B > 0$.
+\end{enumerate}
+
+\subsection{Isomorfismo estructural y l\'imites de la analog\'ia (M\'odulos 6 y 9)}
+
+El modelo obedece la plantilla universal de acumulaci\'on $\frac{dX}{dt} = F_e - F_s$ vista en el curso:
+
+\begin{table}[h]
+\centering
+\caption{Correspondencia isomorfa entre el tanque hidr\'aulico, la mesa de ayuda TI y el AG de la mochila.}
+\begin{tabular}{@{}p{2.4cm}p{2.8cm}p{2.9cm}p{3.0cm}p{3.0cm}@{}}
+\toprule
+\textbf{Papel DS} & \textbf{Tanque (M\'od. 6)} & \textbf{Soporte TI (M\'od. 10)} & \textbf{AG -- Nivel 1 ($D$)} & \textbf{AG -- Nivel 2 ($Q$)} \\
+\midrule
+Nivel (memoria) & Volumen $V$ / Altura $h$ & Backlog $B$ [tickets] & Diversidad $D(t)$ & Calidad $Q(t)$ / $\bar{Z}(t)$ \\
+Flujo entrada & Caudal $q_e$ & Llegadas $\lambda$ & Inyecci\'on $I_D$ & Ganancia $I_Q$ \\
+Flujo salida & Drenaje $q_s = k h$ & Resoluciones $\mu$ & Consumo $O_D = k_D D$ & Carga $O_Q$ \\
+Brecha / Meta & $h^* - h$ & $B - B_{\text{deseado}}$ & $1 - D$ & $B = 1 - Q$ \\
+Disponibilidad & \'Area $A$ & Factor $a(t)$ en $C=Npa$ & Tasa $c_m P_{\text{mut}}$ & Factibilidad $\Phi_{\text{fact}}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{L\'imites declarados de la analog\'ia (M\'odulo 9):} los cromosomas no son un fluido continuo; el AG real es discreto y estoc\'astico, por lo que el modelo de Din\'amica de Sistemas reproduce la \emph{trayectoria media esperada} (promedio poblacional Monte Carlo) y no el ruido de una corrida aislada.
+
+% ============================================================================
+% SECCION 4
+% ============================================================================
+\section{Ecuaciones diferenciales del modelo de 2 niveles: deducci\'on paso a paso}
+
+\subsection{Justificaci\'on de la alineaci\'on con el curso}
+
+Frente a la propuesta inicial, se eliminaron constantes y exponentes sin interpretaci\'on directa en el curso (\texttt{0.25} en cruce, potencia no lineal $\Phi_{\text{fact}}^{1.6558}$, t\'ermino cuadr\'atico $1-(1-P_{\text{mut}})^2$ y $4P_{\text{mut}}(1-P_{\text{mut}})$), sustituy\'endolos por las estructuras lineales y conservativas de los M\'odulos 3 a 10: ajuste hacia meta (Problema 4), drenaje proporcional (M\'odulo 6 y Problema 6), ley de enfriamiento hacia nivel ambiente (Problema 5) y factor de disponibilidad lineal (M\'odulo 10).
+
+\subsection{Nivel 1: Diversidad Gen\'etica $D(t)$}
+
+\subsubsection{Formulaci\'on de balance y flujos}
+El balance conservativo de diversidad establece:
+\begin{equation}
+\frac{dD}{dt} = I_D(t) - O_D(t).
+\end{equation}
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{Flujo de entrada (ajuste hacia la meta $D_{\max} = 1$, an\'alogo al Problema 4):}
+    \begin{equation}
+    I_D(t) = r_{\text{mut}}\big(1 - D(t)\big), \qquad r_{\text{mut}} = c_m\,P_{\text{mut}} \quad [\text{gen}^{-1}].
+    \end{equation}
+    Si $P_{\text{mut}} = 0$, entonces $r_{\text{mut}} = 0$ y $I_D = 0$ (no entra nueva variedad).
+    \item \textbf{Flujo de salida (drenaje proporcional $q_s = k_D D$, an\'alogo al M\'odulo 6 y Problema 3):}
+    \begin{equation}
+    O_D(t) = k_D\,D(t), \qquad k_D = \frac{1}{N} + k_{\text{sel}} + k_e\,\frac{E}{N} \quad [\text{gen}^{-1}].
+    \end{equation}
+    Los tres sumandos representan mecanismos f\'isicos aditivos en $\text{gen}^{-1}$: deriva gen\'etica por muestreo finito ($1/N$), presi\'on de selecci\'on por ruleta ($k_{\text{sel}}$) y fijaci\'on adicional por copia elitista ($k_e E/N$).
+\end{itemize}
+
+Sustituyendo ambos flujos en el balance se obtiene la ecuaci\'on diferencial lineal de primer orden can\'onica del \textbf{M\'odulo 7 y Problema 6}:
+\begin{equation}
+\frac{dD}{dt} = r_{\text{mut}}(1 - D) - k_D D = r_{\text{mut}} - (r_{\text{mut}} + k_D)\,D.
+\label{eq:ode_D}
+\end{equation}
+
+\subsubsection{Deducci\'on paso a paso del equilibrio $D^*$, constante de tiempo $\tau_D$ y soluci\'on anal\'itica}
+
+\textbf{Paso 1 (Condici\'on de equilibrio din\'amico, M\'odulo 7):} imponemos $\frac{dD}{dt} = 0 \iff I_D^* = O_D^*$:
+\begin{equation}
+0 = r_{\text{mut}} - (r_{\text{mut}} + k_D)\,D^* \implies
+(r_{\text{mut}} + k_D)\,D^* = r_{\text{mut}} \implies
+D^* = \frac{r_{\text{mut}}}{r_{\text{mut}} + k_D}.
+\label{eq:D_star}
+\end{equation}
+N\'otese que $0 \le D^* < 1$ para todo $r_{\text{mut}} \ge 0$ y $k_D > 0$; si $P_{\text{mut}} = 0$, entonces $D^* = 0$ (agotamiento total).
+
+\textbf{Paso 2 (Cambio de variable de desviaci\'on al equilibrio):} definimos $e_D(t) = D(t) - D^*$ y $k_{\text{tot}} = r_{\text{mut}} + k_D$. Como $r_{\text{mut}} = k_{\text{tot}} D^*$, la ecuaci\'on~\eqref{eq:ode_D} se reescribe como:
+\begin{equation}
+\frac{de_D}{dt} = \frac{dD}{dt} = k_{\text{tot}} D^* - k_{\text{tot}} D = -k_{\text{tot}}\big(D - D^*\big) = -k_{\text{tot}}\,e_D.
+\end{equation}
+
+\textbf{Paso 3 (Integraci\'on por separaci\'on de variables):}
+\begin{align}
+\frac{de_D}{e_D} &= -k_{\text{tot}}\,dt \implies \int_{e_D(0)}^{e_D(t)} \frac{du}{u} = -\int_{0}^{t} k_{\text{tot}}\,ds \implies
+\ln\!\left(\frac{e_D(t)}{e_D(0)}\right) = -k_{\text{tot}}\,t, \\
+e_D(t) &= e_D(0)\,e^{-k_{\text{tot}}\,t} \implies
+D(t) = D^* + (D_0 - D^*)\,e^{-t/\tau_D},
+\label{eq:D_analitica}
+\end{align}
+donde la \textbf{constante de tiempo}, la \textbf{vida media} y el \textbf{tiempo de cierre del 95\% de la brecha inicial} (Problemas 3 y 4) son:
+\begin{equation}
+\tau_D = \frac{1}{r_{\text{mut}} + k_D}\;[\text{gen}], \qquad
+t_{1/2,D} = \tau_D\ln 2 \approx 0.693\,\tau_D, \qquad
+t_{95,D} = -\tau_D\ln(0.05) \approx 2.996\,\tau_D \approx 3\,\tau_D.
+\end{equation}
+
+\textbf{Sustituci\'on num\'erica en el escenario base ($P_{\text{mut}}=0.15, E=1, N=8$):} con par\'ametros calibrados $c_m = 2.7209$, $k_{\text{sel}} = 0.0250$, $k_e = 0.3971$:
+\begin{align*}
+r_{\text{mut}} &= 2.7209 \times 0.15 = 0.408135\;\text{gen}^{-1}, \\
+k_D &= \frac{1}{8} + 0.0250 + 0.3971\left(\frac{1}{8}\right) = 0.125 + 0.025 + 0.0496375 = 0.1996375\;\text{gen}^{-1}, \\
+k_{\text{tot}} &= 0.408135 + 0.1996375 = 0.6077725\;\text{gen}^{-1}, \\
+D^* &= \frac{0.408135}{0.6077725} = 0.6715, \qquad
+\tau_D = \frac{1}{0.6077725} = 1.6454\;\text{gen}, \qquad
+t_{95,D} \approx 3(1.6454) = 4.9361\;\text{gen}.
+\end{align*}
+
+\subsection{Nivel 2: Calidad Media Normalizada $Q(t)$ y Backlog $B(t)$}
+
+\subsubsection{Formulaci\'on de balance, brecha y flujos}
+Definimos la brecha (backlog) al \'optimo como $B(t) = 1 - Q(t)$ y la ecuaci\'on de balance como:
+\begin{equation}
+\frac{dQ}{dt} = I_Q(t) - O_Q(t), \qquad \bar{Z}(t) = Z^*_{\text{fact}}\,Q(t), \qquad B_Z(t) = Z^*_{\text{fact}}\,B(t).
+\end{equation}
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{Flujo de entrada (ganancia de aptitud por ajuste a meta habilitado por $D$ y $\Phi_{\text{fact}}$):}
+    \begin{equation}
+    I_Q(t) = k_Q\,D(t)\,B(t) = k_Q\,D(t)\,\big(1 - Q(t)\big),
+    \end{equation}
+    con tasa efectiva lineal (an\'aloga a $C(t) = N p a(t)$ del M\'odulo 10):
+    \begin{equation}
+    k_Q = \big(k_{\text{base}} + k_{\text{cr}}\,P_{\text{cr}} + k_{\text{el}}\,E\big)\cdot \Phi_{\text{fact}} \quad [\text{gen}^{-1}].
+    \end{equation}
+    \item \textbf{Flujo de salida (carga mutacional isomorfa a la ley de enfriamiento del Problema 5):}
+    \begin{equation}
+    O_Q(t) = k_{\text{deg}}\,\max\!\big(0,\; Q(t) - Q_{\text{azar}}\big), \qquad
+    k_{\text{deg}} = k_{\text{carga}}\,P_{\text{mut}}\left(1 - \frac{E}{N}\right) \quad [\text{gen}^{-1}].
+    \end{equation}
+    El factor $(1 - E/N)$ indica que el elitismo protege $E$ de los $N$ individuos contra el deterioro mutacional; el operador $\max(0,\cdot)$ asegura que la mutaci\'on solo degrada calidad cuando $Q > Q_{\text{azar}}$.
+\end{itemize}
+
+\subsubsection{Deducci\'on paso a paso del equilibrio $Q^*$ y demostraci\'on anal\'itica del estancamiento}
+
+\textbf{Caso 1 ($P_{\text{mut}} > 0$, existe equilibrio $D^* > 0$):} en r\'egimen estacionario $D(t) \to D^*$ y $Q^* \ge Q_{\text{azar}}$, imponiendo $\frac{dQ}{dt} = 0 \iff I_Q^* = O_Q^*$:
+\begin{align}
+k_Q D^*(1 - Q^*) &= k_{\text{deg}}(Q^* - Q_{\text{azar}}), \\
+k_Q D^* - k_Q D^* Q^* &= k_{\text{deg}} Q^* - k_{\text{deg}} Q_{\text{azar}}, \\
+k_Q D^* + k_{\text{deg}} Q_{\text{azar}} &= \big(k_Q D^* + k_{\text{deg}}\big)\,Q^* \implies
+Q^* = \frac{k_Q D^* + k_{\text{deg}}\,Q_{\text{azar}}}{k_Q D^* + k_{\text{deg}}}.
+\label{eq:Q_star}
+\end{align}
+La constante de tiempo efectiva de ajuste en $Q$ cerca del equilibrio $D^*$ es:
+\begin{equation}
+\tau_Q = \frac{1}{k_Q D^* + k_{\text{deg}}}\;[\text{gen}].
+\end{equation}
+
+\textbf{Sustituci\'on num\'erica en el escenario base ($P_{\text{mut}}=0.15, P_{\text{cr}}=0.89, E=1, C=140$):} con par\'ametros calibrados $k_{\text{base}}=0.1018$, $k_{\text{cr}}=0.0218$, $k_{\text{el}}=0.1814$, $k_{\text{carga}}=1.5854$, $\Phi_{\text{fact}}=1$, $Q_{\text{azar}}=0.5$, $Z^*_{\text{fact}}=70$:
+\begin{align*}
+k_Q &= \big(0.1018 + 0.0218(0.89) + 0.1814(1)\big)\times 1 = 0.302602\;\text{gen}^{-1}, \\
+k_{\text{deg}} &= 1.5854 \times 0.15 \times \left(1 - \frac{1}{8}\right) = 0.208084\;\text{gen}^{-1}, \\
+k_Q D^* &= 0.302602 \times 0.671526 = 0.203205\;\text{gen}^{-1}, \\
+Q^* &= \frac{0.203205 + 0.208084(0.5)}{0.203205 + 0.208084} = \frac{0.307247}{0.411289} = 0.7470, \qquad
+\bar{Z}^* = 70 \times 0.7470 = 52.29\;\text{util}, \\
+\tau_Q &= \frac{1}{0.411289} = 2.4314\;\text{gen}.
+\end{align*}
+
+\textbf{Caso 2 ($P_{\text{mut}} = 0$, demostraci\'on anal\'itica de la Hip\'otesis 1 -- Estancamiento):} cuando $P_{\text{mut}} = 0$, se cumple $r_{\text{mut}} = 0$ y $k_{\text{deg}} = 0$, de modo que $D(t) = D_0 e^{-k_D t}$ y $O_Q(t) = 0$. Sustituyendo en la ecuaci\'on de $Q$:
+\begin{equation}
+\frac{dQ}{dt} = k_Q D_0 e^{-k_D t}\,(1 - Q) \implies
+\frac{dQ}{1 - Q} = k_Q D_0 e^{-k_D t}\,dt.
+\end{equation}
+Integrando desde $t=0$ hasta $t$:
+\begin{align}
+-\ln\!\left(\frac{1 - Q(t)}{1 - Q_0}\right) &= \frac{k_Q D_0}{k_D}\big(1 - e^{-k_D t}\big), \\
+Q(t) &= 1 - (1 - Q_0)\exp\!\left(-\frac{k_Q D_0}{k_D}\big(1 - e^{-k_D t}\big)\right).
+\end{align}
+Tomando el l\'imite cuando $t \to \infty$ ($e^{-k_D t} \to 0$):
+\begin{equation}
+Q_\infty = \lim_{t \to \infty} Q(t) = 1 - (1 - Q_0)\exp\!\left(-\frac{k_Q D_0}{k_D}\right) < 1.
+\label{eq:estancamiento}
+\end{equation}
+Esto prueba matem\'aticamente la \textbf{Hip\'otesis 1}: sin mutaci\'on, la diversidad se agota exponencialmente antes de cerrar la brecha y el algoritmo se estanca irreversiblemente en un valor sub\'optimo $Q_\infty < 1$ dependiente de la diversidad inicial $D_0$.
+
+% ============================================================================
+% SECCION 5
+% ============================================================================
+\section{Simulaci\'on por Euler expl\'icito y estabilidad num\'erica (M\'odulo 8)}
+
+\subsection{Regla de un solo instante y ecuaciones discretas}
+
+Siguiendo estrictamente la regla de oro del \textbf{M\'odulo 8}, todos los flujos de la fila $n$ se eval\'uan usando exclusivamente los estados del instante $n$, y solo despu\'es se actualizan simult\'aneamente los niveles a $n+1$ con restricci\'on f\'isica $[0,1]$ (\textbf{M\'odulo 10}):
+\begin{align}
+t_n &= n\,\Delta t, \qquad B_n = 1 - Q_n, \\
+I_{D,n} &= r_{\text{mut}}(1 - D_n), \qquad O_{D,n} = k_D D_n, \\
+I_{Q,n} &= k_Q D_n B_n, \qquad O_{Q,n} = k_{\text{deg}}\max(0, Q_n - Q_{\text{azar}}), \\
+D_{n+1} &= \max\!\Big(0,\; \min\!\big(1,\; D_n + \Delta t\,(I_{D,n} - O_{D,n})\big)\Big), \\
+Q_{n+1} &= \max\!\Big(0,\; \min\!\big(1,\; Q_n + \Delta t\,(I_{Q,n} - O_{Q,n})\big)\Big).
+\end{align}
+
+\subsection{Desarrollo num\'erico paso a paso ($n = 0, 1, 2$ en escenario base, $\Delta t = 1$)}
+
+Partiendo de $D_0 = 0.8750$ y $Q_0 = 0.5000$ (con $r_{\text{mut}}=0.4081$, $k_D=0.1996$, $k_Q=0.3026$, $k_{\text{deg}}=0.2081$, $Q_{\text{azar}}=0.5000$):
+
+\textbf{Paso $n = 0$ ($t_0 = 0$):}
+\begin{align*}
+B_0 &= 1 - 0.5000 = 0.5000, \\
+I_{D,0} &= 0.4081(1 - 0.8750) = 0.0510, & O_{D,0} &= 0.1996(0.8750) = 0.1747 \implies \Delta D_0 = -0.1237, \\
+I_{Q,0} &= 0.3026(0.8750)(0.5000) = 0.1324, & O_{Q,0} &= 0.2081\max(0, 0) = 0.0000 \implies \Delta Q_0 = +0.1324, \\
+D_1 &= 0.8750 + 1(-0.1237) = \mathbf{0.7513}, & Q_1 &= 0.5000 + 1(+0.1324) = \mathbf{0.6324}.
+\end{align*}
+
+\textbf{Paso $n = 1$ ($t_1 = 1$):}
+\begin{align*}
+B_1 &= 1 - 0.6324 = 0.3676, \\
+I_{D,1} &= 0.4081(1 - 0.7513) = 0.1015, & O_{D,1} &= 0.1996(0.7513) = 0.1500 \implies \Delta D_1 = -0.0485, \\
+I_{Q,1} &= 0.3026(0.7513)(0.3676) = 0.0836, & O_{Q,1} &= 0.2081(0.6324 - 0.5000) = 0.0275 \implies \Delta Q_1 = +0.0560, \\
+D_2 &= 0.7513 + 1(-0.0485) = \mathbf{0.7028}, & Q_2 &= 0.6324 + 1(+0.0560) = \mathbf{0.6884}.
+\end{align*}
+
+\textbf{Paso $n = 2$ ($t_2 = 2$):}
+\begin{align*}
+B_2 &= 1 - 0.6884 = 0.3116, \\
+I_{D,2} &= 0.4081(1 - 0.7028) = 0.1213, & O_{D,2} &= 0.1996(0.7028) = 0.1403 \implies \Delta D_2 = -0.0190, \\
+I_{Q,2} &= 0.3026(0.7028)(0.3116) = 0.0663, & O_{Q,2} &= 0.2081(0.6884 - 0.5000) = 0.0392 \implies \Delta Q_2 = +0.0271, \\
+D_3 &= 0.7028 + 1(-0.0190) = \mathbf{0.6838}, & Q_3 &= 0.6884 + 1(+0.0271) = \mathbf{0.7155}.
+\end{align*}
+Estos valores coinciden al cuarto decimal con las filas 10--13 de la hoja \texttt{04\_Simulacion\_Euler\_DS}.
+
+\subsection{Criterio de estabilidad num\'erica de Euler (Problema 28)}
+
+Reescribiendo la recurrencia de Euler para el error $e_{D,n} = D_n - D^*$:
+\begin{equation}
+e_{D,n+1} = e_{D,n} - \Delta t\,(r_{\text{mut}} + k_D)\,e_{D,n} = \underbrace{\Big(1 - (r_{\text{mut}} + k_D)\,\Delta t\Big)}_{g_D}\,e_{D,n} \implies e_{D,n} = g_D^n\,e_{D,0}.
+\end{equation}
+De aqu\'i se desprenden los tres reg\'imenes num\'ericos del Problema 28:
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{Estable mon\'otono ($0 \le g_D < 1$):} ocurre si $\Delta t \le \tau_D = \frac{1}{r_{\text{mut}}+k_D}$. No hay oscilaci\'on espuria.
+    \item \textbf{Oscilatorio estable ($-1 < g_D < 0$):} ocurre si $\tau_D < \Delta t < 2\tau_D$. Alterna signo pero converge.
+    \item \textbf{Oscilatorio inestable ($|g_D| \ge 1$):} ocurre si $\Delta t \ge 2\tau_D$. La simulaci\'on diverge aunque el sistema continuo sea estable.
+\end{itemize}
+
+\begin{table}[h]
+\centering
+\caption{Evaluaci\'on num\'erica de estabilidad de Euler en el escenario base ($k_{\text{tot}} = 0.6078\;\text{gen}^{-1}$, $\tau_D = 1.6454\;\text{gen}$, $2\tau_D = 3.2907\;\text{gen}$).}
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+\textbf{Paso $\Delta t$ [gen]} & $k_{\text{tot}}\Delta t$ & $g_D = 1 - k_{\text{tot}}\Delta t$ & $|g_D|$ & \textbf{Clasificaci\'on (Problema 28)} \\
+\midrule
+$0.50$ (paso fino) & $0.3039$ & $+0.6961$ & $0.6961$ & Mon\'otona estable (Adecuado) \\
+$1.00$ (paso base) & $0.6078$ & $+0.3922$ & $0.3922$ & Mon\'otona estable (Adecuado) \\
+$2.00$ (paso grande) & $1.2155$ & $-0.2155$ & $0.2155$ & Oscilatoria estable (Reducir $\Delta t$) \\
+$3.50$ (paso excesivo) & $2.1272$ & $-1.1272$ & $1.1272$ & Oscilatoria INESTABLE (Rechazar $\Delta t$) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% ============================================================================
+% SECCION 6
+% ============================================================================
+\section{Calibraci\'on, validaci\'on (RMSE), integral de brecha y sensibilidad}
+
+\subsection{M\'etrica de validaci\'on (RMSE $\le 0.05$) y partici\'on entrenamiento/validaci\'on}
+
+Sea $\bar{Q}_{\text{AG}}(t)$ y $\bar{D}_{\text{AG}}(t)$ el promedio Monte Carlo de $R = 500$ r\'eplicas del AG exacto de 8 bits en cada generaci\'on $t \in \{0,\dots,30\}$, y $Q_{\text{DS}}(t)$, $D_{\text{DS}}(t)$ las trayectorias de Euler del modelo de 2 niveles. El error cuadr\'atico medio ra\'iz es:
+\begin{equation}
+\text{RMSE}_Q = \sqrt{\frac{1}{T+1}\sum_{t=0}^{T}\big(Q_{\text{DS}}(t) - \bar{Q}_{\text{AG}}(t)\big)^2}, \qquad
+\text{RMSE}_D = \sqrt{\frac{1}{T+1}\sum_{t=0}^{T}\big(D_{\text{DS}}(t) - \bar{D}_{\text{AG}}(t)\big)^2}.
+\end{equation}
+Un \'unico vector de 7 par\'ametros $\boldsymbol{\theta} = (c_m, k_{\text{sel}}, k_e, k_{\text{base}}, k_{\text{cr}}, k_{\text{el}}, k_{\text{carga}}) = (2.7209, 0.0250, 0.3971, 0.1018, 0.0218, 0.1814, 1.5854)$ se calibr\'o \'unicamente sobre 5 escenarios de entrenamiento (E1--E5) y se evalu\'o fuera de muestra en 3 escenarios independientes (E6--E8):
+
+\begin{table}[h]
+\centering
+\caption{Resultados de calibraci\'on (E1--E5) y validaci\'on fuera de muestra (E6--E8), Hoja \texttt{05\_Calibracion\_Validacion}.}
+\begin{tabular}{@{}lllcccc@{}}
+\toprule
+\textbf{ID} & \textbf{Escenario} & \textbf{Conjunto} & $\text{RMSE}_Q$ & $\text{RMSE}_D$ & $\max\text{RMSE}$ & \textbf{Cumple $\le 0.05$} \\
+\midrule
+E1 & Base ($P_{\text{mut}}=0.15, P_{\text{cr}}=0.89, E=1, C=140$) & Calibraci\'on & 0.0186 & 0.0137 & 0.0186 & S\'i \\
+E2 & Sin mutaci\'on ($P_{\text{mut}}=0.00, E=1, C=140$) & Calibraci\'on & 0.0145 & 0.0072 & 0.0145 & S\'i \\
+E3 & Baja mutaci\'on ($P_{\text{mut}}=0.05, E=1, C=140$) & Calibraci\'on & 0.0372 & 0.0187 & 0.0372 & S\'i \\
+E4 & Sin elitismo ($P_{\text{mut}}=0.15, E=0, C=140$) & Calibraci\'on & 0.0098 & 0.0183 & 0.0183 & S\'i \\
+E5 & Capacidad vinculante ($P_{\text{mut}}=0.15, E=1, C=55$) & Calibraci\'on & 0.0372 & 0.0254 & 0.0372 & S\'i \\
+\midrule
+E6 & Sin mutaci\'on ni elitismo ($P_{\text{mut}}=0.00, E=0$) & Validaci\'on & 0.0440 & 0.0152 & 0.0440 & S\'i \\
+E7 & Alta mutaci\'on ($P_{\text{mut}}=0.25, E=1, C=140$) & Validaci\'on & 0.0387 & 0.0124 & 0.0387 & S\'i \\
+E8 & Bajo cruce ($P_{\text{mut}}=0.15, P_{\text{cr}}=0.50, E=1$) & Validaci\'on & 0.0186 & 0.0130 & 0.0186 & S\'i \\
+\midrule
+\multicolumn{3}{l}{\textbf{Promedio global / M\'aximo global (8/8 cumplen)}} & \textbf{0.0273} & \textbf{0.0155} & \textbf{0.0440} & \textbf{8/8 S\'i} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Integral acumulada de brecha (M\'odulo 10) y sensibilidad $\pm 10\%$ (Problema 29)}
+
+Para comparar pol\'iticas a lo largo de todo el horizonte $H=30$ generaciones, el \textbf{M\'odulo 10} define la exposici\'on acumulada de brecha:
+\begin{equation}
+E_B = \int_{0}^{T} B(t)\,dt \approx \sum_{n=0}^{M-1} B_n\,\Delta t \quad [\text{gen}].
+\end{equation}
+Entre las pol\'iticas con exploraci\'on activa ($P_{\text{mut}} > 0$), E3 ($P_{\text{mut}}=0.05, E=1$) logra el mejor desempe\~no con $Q(30) = 0.8193$, $D(30) = 0.4053$ y la menor integral de brecha ($E_B = 6.29\;\text{gen}$ frente a $8.08$ en E1 y $11.30$ en E4 sin elitismo).
+
+\textbf{Sensibilidades logar\'itmicas exactas del equilibrio $D^*$ (Problema 29):} derivando $D^* = \frac{r_{\text{mut}}}{r_{\text{mut}} + k_D}$:
+\begin{align}
+\frac{\partial D^*}{\partial r_{\text{mut}}} &= \frac{k_D}{(r_{\text{mut}} + k_D)^2} \implies
+S_{r_{\text{mut}}}^{D^*} = \frac{r_{\text{mut}}}{D^*}\frac{\partial D^*}{\partial r_{\text{mut}}} = \frac{k_D}{r_{\text{mut}} + k_D} = 1 - D^* = +0.3285, \\
+\frac{\partial D^*}{\partial k_D} &= -\frac{r_{\text{mut}}}{(r_{\text{mut}} + k_D)^2} \implies
+S_{k_D}^{D^*} = \frac{k_D}{D^*}\frac{\partial D^*}{\partial k_D} = -\frac{k_D}{r_{\text{mut}} + k_D} = -(1 - D^*) = -0.3285.
+\end{align}
+Ante incertidumbre independiente de $\pm 10\%$ en todas las tasas (hoja \texttt{06\_Escenarios\_y\_Sensibilidad}):
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{Peor caso} ($-10\%$ en $r_{\text{mut}}, k_Q$; $+10\%$ en $k_D, k_{\text{deg}}$): $D^* = 0.6258\;(-6.8\%)$, $Q^* = 0.7134\;(-4.5\%)$.
+    \item \textbf{Mejor caso} ($+10\%$ en $r_{\text{mut}}, k_Q$; $-10\%$ en $k_D, k_{\text{deg}}$): $D^* = 0.7142\;(+6.4\%)$, $Q^* = 0.7797\;(+4.4\%)$.
+\end{itemize}
+
+% ============================================================================
+% SECCION 7
+% ============================================================================
+\section{Formulación matemática de las pruebas estadísticas ($\alpha = 0.05$)}
+
+Todas las pruebas de la hoja \texttt{07\_Analisis\_Estadistico} se eval\'uan con f\'ormulas nativas de Excel sobre $n=30$ r\'eplicas independientes por grupo (y $N=160$ en el dise\~no factorial $2\times 2\times 2$ con $n_{\text{celda}}=20$).
+
+\subsection{Prueba de rangos con signo de Wilcoxon (muestras pareadas)}
+Compara $D(30)$ bajo $P_{\text{mut}} = 0.05$ frente a $P_{\text{mut}} = 0.00$ partiendo de las mismas $n=30$ poblaciones iniciales. Sean $d_i = D_{0.05,i} - D_{0,i}$, $n_{\text{ef}}$ el n\'umero de diferencias no nulas y $R_i = \text{rango}(|d_i|)$:
+\begin{equation}
+W^+ = \sum_{i : d_i > 0} R_i, \qquad
+\mu_W = \frac{n_{\text{ef}}(n_{\text{ef}}+1)}{4}, \qquad
+\sigma_W = \sqrt{\frac{n_{\text{ef}}(n_{\text{ef}}+1)(2n_{\text{ef}}+1)}{24}},
+\end{equation}
+\begin{equation}
+Z_W = \frac{|W^+ - \mu_W|}{\sigma_W}, \qquad p = 2\big(1 - \Phi(Z_W)\big).
+\end{equation}
+\textbf{Resultado obtenido:} $n_{\text{ef}} = 30$, $W^+ = 450$, $Z_W = 4.474$, $p = 7.69 \times 10^{-6} < 0.05$ (\textbf{Se rechaza $H_0$}: la mutaci\'on sostiene significativamente la diversidad).
+
+\subsection{Prueba de Kruskal--Wallis ($k = 4$ niveles de $P_{\text{mut}}$)}
+Eval\'ua $Q(30)$ en $k=4$ grupos independientes ($P_{\text{mut}} \in \{0.00, 0.05, 0.15, 0.25\}$, $n_j = 30$, $N = 120$). Asignando rangos medios globales con correcci\'on de empates y sumando por grupo $R_j$:
+\begin{equation}
+H = \frac{12}{N(N+1)}\sum_{j=1}^{k}\frac{R_j^2}{n_j} - 3(N+1) \;\sim\; \chi^2_{k-1}, \qquad
+p = P\!\left(\chi^2_{3} \ge H\right).
+\end{equation}
+\textbf{Resultado obtenido:} $H = 77.44$, $p = 1.08 \times 10^{-16} < 0.05$ (\textbf{Se rechaza $H_0$}: el nivel de mutaci\'on altera significativamente la calidad final $Q(30)$).
+
+\subsection{Prueba $U$ de Mann--Whitney (Elitismo $E=1$ vs $E=0$)}
+Compara $Q(30)$ en dos muestras independientes de tama\~no $n_1 = n_2 = 30$ bajo $P_{\text{mut}} = 0.15$. Con suma de rangos combinados $R_1$ del grupo $E=1$:
+\begin{equation}
+U_1 = R_1 - \frac{n_1(n_1+1)}{2}, \qquad
+Z_U = \frac{\left|U_1 - \dfrac{n_1 n_2}{2}\right|}{\sqrt{\dfrac{n_1 n_2 (n_1 + n_2 + 1)}{12}}}, \qquad
+p = 2\big(1 - \Phi(Z_U)\big).
+\end{equation}
+\textbf{Resultado obtenido:} $U_1 = 721$, $Z_U = 4.007$, $p = 6.16 \times 10^{-5} < 0.05$ (\textbf{Se rechaza $H_0$}: el elitismo eleva significativamente la calidad media estacionaria).
+
+\subsection{ANOVA de tres factores ($P_{\text{mut}} \times P_{\text{cr}} \times E$, $N = 160$)}
+En el dise\~no factorial balanceado $a \times b \times c = 2 \times 2 \times 2$ ($P_{\text{mut}} \in \{0.05, 0.15\}$, $P_{\text{cr}} \in \{0.50, 0.89\}$, $E \in \{0, 1\}$, $n = 20$ r\'eplicas/celda), la variabilidad total de $Q(30)$ se descompone ortogonalmente:
+\begin{equation}
+SS_T = SS_A + SS_B + SS_C + SS_{AB} + SS_{AC} + SS_{BC} + SS_{ABC} + SS_{\text{Err}},
+\end{equation}
+donde, siendo $\bar{Y}_{\dots}$ la gran media, $\bar{Y}_{i\cdot\cdot}$ la media del nivel $i$ del factor $A$ y $\bar{Y}_{ijk}$ la media de la celda $(i,j,k)$:
+\begin{align}
+SS_A &= bcn\sum_{i=1}^{a}\big(\bar{Y}_{i\cdot\cdot} - \bar{Y}_{\dots}\big)^2, \quad
+SS_B = acn\sum_{j=1}^{b}\big(\bar{Y}_{\cdot j\cdot} - \bar{Y}_{\dots}\big)^2, \quad
+SS_C = abn\sum_{k=1}^{c}\big(\bar{Y}_{\cdot\cdot k} - \bar{Y}_{\dots}\big)^2, \\
+SS_{AB} &= cn\sum_{i,j}\big(\bar{Y}_{ij\cdot} - \bar{Y}_{i\cdot\cdot} - \bar{Y}_{\cdot j\cdot} + \bar{Y}_{\dots}\big)^2
+\quad (\text{an\'alogamente } SS_{AC}, SS_{BC}), \\
+SS_{ABC} &= n\sum_{i,j,k}\big(\bar{Y}_{ijk} - \bar{Y}_{ij\cdot} - \bar{Y}_{i\cdot k} - \bar{Y}_{\cdot jk} + \bar{Y}_{i\cdot\cdot} + \bar{Y}_{\cdot j\cdot} + \bar{Y}_{\cdot\cdot k} - \bar{Y}_{\dots}\big)^2, \\
+SS_{\text{Err}} &= \sum_{i,j,k}\sum_{r=1}^{n}\big(Y_{ijkr} - \bar{Y}_{ijk}\big)^2, \qquad
+MS_X = \frac{SS_X}{\text{df}_X}, \qquad
+F_X = \frac{MS_X}{MS_{\text{Err}}}, \qquad
+\eta^2_X = \frac{SS_X}{SS_T}.
+\end{align}
+
+\begin{table}[h]
+\centering
+\caption{Tabla ANOVA de 3 factores sobre $Q(30)$ ($N = 160$, $\text{df}_{\text{Err}} = 152$, $\alpha = 0.05$).}
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+\textbf{Fuente de variaci\'on} & \textbf{g.l.} & \textbf{Estad\'istico $F$} & \textbf{Valor-$p$} & \textbf{\% Varianza ($\eta^2$)} \\
+\midrule
+Factor A: Mutaci\'on ($P_{\text{mut}}$) & 1 & 85.59 & $1.92\times 10^{-16}$ & 23.4\% (Significativo) \\
+Factor B: Cruce ($P_{\text{cr}}$) & 1 & 0.13 & $0.7179$ & 0.04\% (No sig.) \\
+Factor C: Elitismo ($E$) & 1 & 125.23 & $1.39\times 10^{-21}$ & 34.2\% (Significativo) \\
+Interacciones ($A\times B$, $A\times C$, $B\times C$, $A\times B\times C$) & 1 c/u & 0.17--1.29 & $>0.25$ & $<0.4\%$ c/u (No sig.) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Conclusi\'on integrada:} el modelo aditivo lineal de Din\'amica de Sistemas queda doblemente respaldado por la estad\'istica: los dos factores dominantes del ANOVA son precisamente el Elitismo (34.2\%) y la Mutaci\'on (23.4\%), mientras que la ausencia de interacciones significativas valida la separaci\'on lineal de tasas $k_Q$ y $k_{\text{deg}}$, y la baja significancia del cruce ($p=0.7179$) coincide con el bajo coeficiente calibrado $k_{\text{cr}} = 0.0218$.
+
+\end{document}

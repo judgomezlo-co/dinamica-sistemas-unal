@@ -1,0 +1,136 @@
+\documentclass[11pt,letterpaper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish]{babel}
+\usepackage{amsmath,amssymb,mathtools}
+\usepackage{geometry}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{hyperref}
+
+\geometry{margin=2.2cm}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.55em}
+
+\definecolor{Cobalt}{HTML}{1D4ED8}
+\definecolor{Emerald}{HTML}{047857}
+\definecolor{Slate}{HTML}{334155}
+
+\title{\textbf{Ecuación de Trayectoria del Modelo Agregado de Dinámica de Sistemas}\\
+\large Algoritmo Genético de la Mochila Entera Acotada ($N = 8,\; L = 8\text{ bits}$)}
+\author{Felipe Grisales López \quad -- \quad Andrés Hernández}
+\date{Proyecto Dinámica de Sistemas}
+
+\begin{document}
+\maketitle
+
+\section{Definición de Parámetros y Coeficientes Agrupados}
+
+El sistema dinámico discreto ($\Delta t = 1\text{ generación}$) describe la evolución acoplada de dos niveles (stocks): la \textbf{Diversidad Genética} $D(t) \in [0, 1]$ y la \textbf{Calidad Media Normalizada} $Q(t) \in [0, 1]$, junto con la brecha o \textit{backlog} al óptimo $B(t) = 1 - Q(t)$.
+
+Para simplificar la lectura de la trayectoria, agrupamos los parámetros operativos del Algoritmo Genético ($P_{\text{mut}}, P_{\text{cr}}, E, N$) y estructurales del paisaje combinatorio ($\Phi_{\text{fact}}, Q_{\text{azar}}$) en cuatro coeficientes efectivos constantes dentro de cada escenario:
+
+\begin{align}
+a_D &= 4\,P_{\text{mut}}(1 - P_{\text{mut}}) && \text{(Tasa de inyección de diversidad por mutación)} \\[4pt]
+b_D &= \frac{1 - E/N}{N} + k_{\text{sel}} + k_e\,\frac{E}{N} && \text{(Tasa de drenaje por deriva finita, selección y elitismo)} \\[4pt]
+g_Q &= \Big(k_q\,(1 + 0.25\,P_{\text{cr}}) + k_{eq}\,E\Big)\,\Phi_{\text{fact}}^{\alpha} && \text{(Coeficiente de ganancia de aptitud efectiva)} \\[4pt]
+m_Q &= k_{\text{load}}\,\big(1 - (1 - P_{\text{mut}})^2\big)\left(1 - \frac{E}{N}\right) && \text{(Coeficiente de carga mutacional sobre no élite)}
+\end{align}
+
+\begin{table}[h]
+\centering
+\caption{Parámetros base de clase (\texttt{Mochila.xlsx}) y constantes calibradas preliminares}
+\begin{tabular}{@{}llll@{}}
+\toprule
+\textbf{Símbolo} & \textbf{Valor base} & \textbf{Descripción} & \textbf{Unidades} \\ \midrule
+$N,\; L$ & $8,\; 8$ & Tamaño poblacional y longitud del cromosoma & $\text{ind},\; \text{bits}$ \\
+$P_{\text{cr}},\; P_{\text{mut}},\; E$ & $0.89,\; 0.15,\; 1$ & Prob. de cruce, prob. de mutación y elitismo & $-,\; -,\; \{0,1\}$ \\
+$\Phi_{\text{fact}},\; Q_{\text{azar}}$ & $1.000,\; 0.500$ ($C=140$) & Factibilidad del espacio y calidad esperada al azar & Adimensional \\
+$k_{\text{sel}},\; k_e$ & $0.0419,\; 0.7613$ & Constantes de consumo selectivo y fijación elitista & $\text{gen}^{-1}$ \\
+$k_q,\; k_{eq},\; k_{\text{load}},\; \alpha$ & $0.1279,\; 0.2149,\; 1.0518,\; 1.6558$ & Ganancia, impulso élite, carga mutacional y penalidad & $\text{gen}^{-1},\; -$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Ecuación de Trayectoria en Diferencias ($\Delta t = 1\text{ gen}$)}
+
+La trayectoria del vector de estado $\mathbf{x}(t) = \big(D(t),\, Q(t)\big)^{\mathsf{T}}$ generación por generación está dada por el sistema acoplado en diferencias de primer orden:
+
+\begin{equation}
+\boxed{
+\begin{aligned}
+D(t) &= D(t - \Delta t) + \Big[\,a_D\big(1 - D(t - \Delta t)\big) - b_D\,D(t - \Delta t)\,\Big]\Delta t \\[6pt]
+Q(t) &= Q(t - \Delta t) + \Big[\,g_Q\,D(t - \Delta t)\big(1 - Q(t - \Delta t)\big) - m_Q\big(Q(t - \Delta t) - Q_{\text{azar}}\big)\,\Big]\Delta t
+\end{aligned}
+}
+\end{equation}
+
+De forma equivalente, con $\Delta t = 1$ generación y $B(t) = 1 - Q(t)$:
+\begin{align}
+D(t) &= \big(1 - a_D - b_D\big)\,D(t-1) + a_D \\
+Q(t) &= \big(1 - g_Q\,D(t-1) - m_Q\big)\,Q(t-1) + g_Q\,D(t-1) + m_Q\,Q_{\text{azar}}
+\end{align}
+
+\section{Ecuación Explícita de la Trayectoria en Función de $t$}
+
+\subsection{Trayectoria analítica exacta de la Diversidad $D(t)$}
+Dado que la ecuación de $D(t)$ es lineal y autónoma con tasa total de ajuste $\lambda_D = a_D + b_D$, su solución cerrada exacta para cualquier generación $t \in \{0, 1, \dots, T\}$ es:
+
+\begin{equation}
+\boxed{
+D(t) = D^*_{\text{eq}} + \big(D(0) - D^*_{\text{eq}}\big)\,(1 - \lambda_D)^t
+}
+\end{equation}
+
+y su análogo en tiempo continuo es $D(t) = D^*_{\text{eq}} + \big(D(0) - D^*_{\text{eq}}\big)\,e^{-\lambda_D t}$, donde el punto de equilibrio estacionario de diversidad es:
+
+\begin{equation}
+D^*_{\text{eq}} = \frac{a_D}{a_D + b_D} = \frac{4\,P_{\text{mut}}(1 - P_{\text{mut}})}{4\,P_{\text{mut}}(1 - P_{\text{mut}}) + \dfrac{1 - E/N}{N} + k_{\text{sel}} + k_e\,\dfrac{E}{N}}
+\end{equation}
+
+\subsection{Trayectoria asintótica de la Calidad Media $Q(t)$}
+Al sustituir $D(t) \to D^*_{\text{eq}}$, la calidad media sigue una aproximación exponencial hacia su equilibrio estacionario $Q^*_{\text{eq}}$ con tasa efectiva $\lambda_Q = g_Q\,D^*_{\text{eq}} + m_Q$:
+
+\begin{equation}
+\boxed{
+Q(t) \approx Q^*_{\text{eq}} + \big(Q(0) - Q^*_{\text{eq}}\big)\,(1 - \lambda_Q)^t,
+\qquad
+Q^*_{\text{eq}} = \frac{g_Q\,D^*_{\text{eq}} + m_Q\,Q_{\text{azar}}}{g_Q\,D^*_{\text{eq}} + m_Q}
+}
+\end{equation}
+
+y la trayectoria de la brecha (\textit{backlog}) es $B(t) = 1 - Q(t)$.
+
+\section{Ecuación de la Trayectoria en el Retrato de Fase $Q(D)$}
+
+Eliminando la variable temporal $t$ mediante la regla de la cadena $\dfrac{dQ}{dD} = \dfrac{dQ/dt}{dD/dt}$, la pendiente de la trayectoria en el plano de fase $(D, Q)$ obedece a la ecuación diferencial:
+
+\begin{equation}
+\boxed{
+\frac{dQ}{dD} = \frac{I_Q(D, Q) - O_Q(Q)}{I_D(D) - O_D(D)} = \frac{g_Q\,D\,(1 - Q) - m_Q\,(Q - Q_{\text{azar}})}{a_D\,(1 - D) - b_D\,D}
+}
+\end{equation}
+
+\subsection{Caso crítico sin mutación ($P_{\text{mut}} = 0$): Demostración analítica de la Hipótesis 1}
+Cuando $P_{\text{mut}} = 0$, se cumple exactamente que $a_D = 0$ y $m_Q = 0$. El factor $D$ se cancela en numerador y denominador:
+\[
+\frac{dQ}{dD} = -\frac{g_Q}{b_D}\,(1 - Q)
+\]
+Integrando por separación de variables desde la condición inicial $(D_0, Q_0)$ hasta $(D, Q)$ se obtiene la \textbf{ecuación exacta cerrada de la trayectoria en el plano de fase}:
+
+\begin{equation}
+\boxed{
+Q(D) = 1 - (1 - Q_0)\,\exp\!\left(-\frac{g_Q}{b_D}\,(D_0 - D)\right)
+}
+\end{equation}
+
+Al agotarse la diversidad ($D \to 0$), el sistema alcanza inevitablemente un estancamiento prematuro con una brecha residual no nula:
+\[
+Q_{\max\text{ alcanzable}} = 1 - (1 - Q_0)\,e^{-(g_Q / b_D)\,D_0} < 1,
+\qquad
+B_{\text{residual}} = (1 - Q_0)\,e^{-(g_Q / b_D)\,D_0} > 0
+\]
+demostrando analíticamente por qué la falta de mutación congela la búsqueda antes de alcanzar el óptimo global.
+
+\end{document}
